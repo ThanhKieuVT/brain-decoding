@@ -1,0 +1,10 @@
+# Tạo môi trường:  conda env create -f environment.yml
+# Phiên bản gói Python được ghim trong requirements.txt.
+name: braindec
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - pip
+  - pip:
+      - -r requirements.txt

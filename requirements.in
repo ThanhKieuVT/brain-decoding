@@ -1,0 +1,14 @@
+# Gói trực tiếp. requirements.txt là bản ghim đầy đủ sinh từ file này.
+torch
+torchvision
+numpy
+scipy
+pandas
+scikit-learn
+pyyaml
+psutil
+matplotlib
+pillow
+pytest
+ruff
+black

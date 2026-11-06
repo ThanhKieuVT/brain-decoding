@@ -1,0 +1,31 @@
+# Dữ liệu: KHÔNG commit (PLAN 1.1, 1.2). Neo về gốc repo bằng dấu "/" đầu dòng,
+# để không chặn nhầm code loader trong brain/data/ và gaze/data/.
+/data/
+outputs/
+
+# Checkpoint và trọng số
+*.ckpt
+*.pt
+*.pth
+*.safetensors
+*.hdf5
+*.h5
+*.npy
+*.npz
+
+# Ảnh sinh ra: không commit ở bất kỳ đâu trong results/ hay logs/
+results/**/*.png
+results/**/*.jpg
+results/**/*.jpeg
+
+# Python và công cụ
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.venv/
+*.egg-info/
+
+# macOS và editor
+.DS_Store
+.vscode/
