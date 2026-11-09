@@ -88,8 +88,8 @@ Hệ quả:
 
 ## 6. Các bước chạy
 
-1. Trên máy: commit code, rồi `bash scripts/pack_for_colab.sh` để tạo file zip. Hoặc đẩy repo lên GitHub ở chế độ private.
-2. Tải file zip lên `MyDrive/BrainDecoding/code/`.
+1. Code nằm ở repo private `github.com/ThanhKieuVT/brain-decoding`. Tạo một fine-grained token chỉ đọc cho repo này và lưu vào Secrets của Colab với tên `GH_TOKEN`.
+2. Notebook tự clone hoặc `git pull` bản mới nhất mỗi lần chạy. Cách dự phòng: `bash scripts/pack_for_colab.sh` rồi tải file zip lên `MyDrive/BrainDecoding/code/`.
 3. Mở `colab/P1_EEG_00_data.ipynb` trên Colab, chạy hết với `SUBJECTS = ['sub-01']`.
 4. Gửi lại cho em: dòng trong `results/pilot/profile.csv`, sai số đổi kiểu trong meta, và hai file CSV về category.
 5. Chạy `colab/P1_EEG_01_pipeline_check.ipynb` để kiểm tra đường đi của shuffle, metric và PRR trên dữ liệu thật. Kết quả của notebook này chỉ để kiểm tra code.
