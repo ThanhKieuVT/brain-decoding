@@ -29,3 +29,7 @@ __pycache__/
 # macOS và editor
 .DS_Store
 .vscode/
+
+# Tài liệu nội bộ, không đưa lên repo public
+/PLAN.md
+/docs/tcs_cfg_spec.md
