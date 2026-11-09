@@ -18,7 +18,7 @@ target-version = ["py310"]
 [tool.ruff]
 line-length = 100
 target-version = "py310"
-extend-exclude = ["third_party"]
+extend-exclude = ["third_party", "colab"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]

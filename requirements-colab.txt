@@ -1,0 +1,8 @@
+# Gói cần thêm trên Google Colab. Không cài torch/torchvision: dùng bản CUDA sẵn có của Colab.
+# Phiên bản thực tế của mỗi phiên được ghi vào logs/pip_freeze_*.txt trên Drive.
+huggingface_hub>=0.24
+psutil
+scipy
+scikit-learn
+pandas
+pytest
