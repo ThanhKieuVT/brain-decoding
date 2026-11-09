@@ -12,3 +12,9 @@
 - Kết quả: `pytest -q` đạt 29/29, ruff và black sạch. Notebook mới được kiểm tra cú pháp, chưa chạy trên Colab.
 - Số đo: bản 63 kênh 250 Hz trên Hugging Face nặng 10,35 GB mỗi subject (float64); float16 còn khoảng 2,59 GB. Đọc pickle protocol 4 tốn RAM khoảng 1,1 lần kích thước mảng (đo trên máy).
 - Vấn đề còn lại: trong 1.854 concept THINGS, 559 không có category và 302 có nhiều category (bảng manual), cần chị chốt cách xử lý cho shuf-w. Chưa có wrapper train NICE và ATM, chưa có metric ảnh.
+
+## 2026-11-09 – T12 (chuẩn bị): ghi lại giao thức NICE và ATM
+- Đã làm: đọc code `main` của NICE (a7709d8) và ATM (49cb3a2), ghi giao thức vào `brain/protocols.py`: cửa sổ thời gian, lần lặp, validation, đích retrieval, k-way. Đổi lưu trữ mặc định sang float32 vì code gốc đưa float32 vào model.
+- Kết quả: `pytest -q` đạt 34/34.
+- Phát hiện: NICE rút seed ngẫu nhiên không ghi lại, ATM không đặt seed, nên chỉ tái tạo được quy trình, không tái tạo được đúng con số. ATM cắt `times[50:]` làm mặt nạ cho trục thời gian 250 mẫu; cần kiểm tra trên file thật.
+- Vấn đề còn lại: float32 cho 10 subject cần khoảng 52 GB trên Drive.

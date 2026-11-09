@@ -42,7 +42,7 @@ def load_pickled_eeg(path: str | Path) -> dict:
 def convert_subject(
     src_dir: str | Path,
     dst_dir: str | Path,
-    dtype: str = "float16",
+    dtype: str = "float32",
     chunk: int = 512,
     check_rows: int = 64,
 ) -> dict:

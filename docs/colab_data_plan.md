@@ -28,7 +28,7 @@ Tổng tải xuống nếu lấy đủ 10 subject là khoảng 104 GB. Notebook 
 
 ## 3. Lưu trữ trên Google Drive
 
-Bản gốc float64 quá lớn để giữ trên Drive. Notebook chuyển sang **float16** và lưu dạng `.npy` thường:
+Bản gốc float64 quá lớn để giữ trên Drive. Notebook chuyển sang **float32** và lưu dạng `.npy` thường. Code gốc của NICE và ATM đều đổi dữ liệu sang float32 trước khi đưa vào model, nên float32 giữ đúng con số model nhìn thấy. float16 làm số liệu lệch khỏi bài gốc, chỉ nên dùng khi thiếu chỗ và không cần so với bài gốc.
 
 | | Mỗi subject | 10 subject |
 |---|---|---|
@@ -36,13 +36,9 @@ Bản gốc float64 quá lớn để giữ trên Drive. Notebook chuyển sang *
 | float16 | khoảng 2,59 GB | khoảng 25,9 GB |
 | float32, nếu cần | khoảng 5,18 GB | khoảng 51,8 GB |
 
-Drive miễn phí có 15 GB, không đủ cho 10 subject kể cả ở float16. Có ba cách:
+Drive miễn phí có 15 GB, chỉ đủ cho khoảng 2 subject ở float32. Vì cần so số với bài gốc, em đề xuất **mua gói Google One 100 GB**, đủ cho 10 subject ở float32 cùng ảnh, embedding và kết quả. Nếu chưa mua, có thể giữ 2 subject một lúc rồi thay dần.
 
-1. **Mua gói Google One 100 GB (em đề xuất).** Đủ cho cả 10 subject ở float16 cùng ảnh, embedding và kết quả.
-2. Giữ trên Drive miễn phí khoảng 4–5 subject một lúc, chạy xong thì thay subject.
-3. Dùng float32 nếu kiểm tra cho thấy float16 làm sai kết quả. Cách này cần gói 100 GB.
-
-Notebook ghi lại sai số lớn nhất khi đổi kiểu, đo trên 64 ảnh đầu, vào `training_meta.json` và `test_meta.json`. Chị xem con số này ở lần chạy sub-01 trước khi chạy tiếp các subject khác.
+Notebook ghi lại sai số lớn nhất khi đổi kiểu, đo trên 64 ảnh đầu, vào `training_meta.json` và `test_meta.json`.
 
 Cấu trúc thư mục trên Drive:
 
@@ -51,7 +47,7 @@ MyDrive/BrainDecoding/
   code/                         file zip code (nếu không dùng GitHub)
   data/
     things_eeg2/
-      eeg_63ch_250hz_f16/sub-01/  training_eeg.npy, training_meta.json, test_eeg.npy, test_meta.json
+      eeg_63ch_250hz_f32/sub-01/  training_eeg.npy, training_meta.json, test_eeg.npy, test_meta.json
       archives/                    images_set.tar.gz, ViT-H-14_features_*.pt
       val_split_seed0.json         concept dùng làm validation
     things_meta/                   category27_*.tsv, concepts-metadata_things.tsv
@@ -61,13 +57,36 @@ MyDrive/BrainDecoding/
 
 Drive chậm khi đọc hàng chục nghìn file nhỏ, nên gói ảnh được giữ nguyên dạng tar trên Drive và giải nén vào `/content` mỗi phiên.
 
-## 4. Runtime Colab
+## 4. Đối chiếu giao thức với bài gốc
+
+Chi tiết lấy từ code nhánh `main` (NICE @ a7709d8, ATM @ 49cb3a2) và được ghi trong `brain/protocols.py`.
+
+| Bước | NICE | ATM | Chế độ audit chung |
+|---|---|---|---|
+| Tiền xử lý | 63 kênh, 250 Hz, whitening tính từ train | Giống NICE, cùng đoạn code | Giống |
+| Kiểu số đưa vào model | float32 | float32 | float32 |
+| Cửa sổ thời gian | Dùng đủ mọi mẫu | `times[50:]`, giữ 0–1,0 s | Dùng đủ mọi mẫu |
+| Lần lặp khi train | Trung bình 4 lần | Mỗi lần là một mẫu riêng | Trung bình 4 lần |
+| Lần lặp khi test | Trung bình 80 lần | Trung bình 80 lần | Trung bình 80 lần |
+| Validation | 740 ảnh ngẫu nhiên, tách theo ảnh | Không có | 74 concept, 740 ảnh, tách theo concept |
+| Chọn checkpoint | Loss validation nhỏ nhất | Độ chính xác test cao nhất | Loss validation nhỏ nhất |
+| Đích retrieval test | "Tâm" concept, CLIP ViT-L/14 | Ảnh đã xem, OpenCLIP ViT-H-14 | Ảnh đã xem |
+| Huấn luyện | 200 epoch, batch 1000, Adam, lr 2e-4 | 40 epoch, batch 64, AdamW, lr 3e-4 | Theo decoder |
+| Seed | Rút ngẫu nhiên, không ghi lại | Không đặt | Cố định và ghi lại |
+
+Hệ quả:
+- **Không tái tạo được đúng từng con số**, vì cả hai bài đều không cố định seed. Chỉ tái tạo được đúng quy trình. Cách so đúng là chạy nhiều seed rồi xem số của bài gốc có nằm trong khoảng dao động không.
+- **ATM chọn checkpoint theo test**, trái quy tắc 1.4 của PLAN.md. Dự án báo cáo epoch cuối và trung bình 10 epoch cuối; chính bài ATM cũng báo cáo trung bình 10 epoch cuối ở Bảng 4. Khi so với số chọn theo test của ATM, cần ghi rõ khác biệt này.
+- **Phép cắt thời gian của ATM** chỉ hợp lệ khi `len(times) - 50` bằng số mẫu thời gian của dữ liệu. Theo dung lượng file, dữ liệu có 250 mẫu. Notebook 00 có ô kiểm tra điểm này trên file thật; nếu không khớp thì phải đọc lại code ATM trước khi tái hiện.
+- **So số với bài gốc** dùng giao thức NICE hoặc ATM. **So PRR giữa các decoder** dùng chế độ audit chung.
+
+## 5. Runtime Colab
 
 - **Chuyển đổi dữ liệu:** không cần GPU. Đo trên máy cho thấy đọc một dict pickle (protocol 4 trở lên) tốn RAM khoảng 1,1 lần kích thước mảng. File train float64 là 8,34 GB, nên cần khoảng 9–10 GB RAM. Runtime thường của Colab có khoảng 12–13 GB, vừa đủ nhưng sát. Nếu bị tràn RAM, chọn High-RAM.
 - **Train NICE, ATM và sinh ảnh:** chưa đo. Mọi bước đều được bọc trong `bench.profile.Profiler` và ghi vào `results/pilot/profile.csv` trên Drive, để có số thật trước khi ước lượng thời gian cho 10 subject × 3 seed.
 - Không cài lại torch trên Colab. `requirements-colab.txt` chỉ cài các gói còn thiếu; phiên bản thực tế được ghi vào `logs/pip_freeze_*.txt`.
 
-## 5. Các bước chạy
+## 6. Các bước chạy
 
 1. Trên máy: commit code, rồi `bash scripts/pack_for_colab.sh` để tạo file zip. Hoặc đẩy repo lên GitHub ở chế độ private.
 2. Tải file zip lên `MyDrive/BrainDecoding/code/`.
@@ -75,29 +94,30 @@ Drive chậm khi đọc hàng chục nghìn file nhỏ, nên gói ảnh được
 4. Gửi lại cho em: dòng trong `results/pilot/profile.csv`, sai số đổi kiểu trong meta, và hai file CSV về category.
 5. Chạy `colab/P1_EEG_01_pipeline_check.ipynb` để kiểm tra đường đi của shuffle, metric và PRR trên dữ liệu thật. Kết quả của notebook này chỉ để kiểm tra code.
 
-## 6. Code đã có
+## 7. Code đã có
 
 | Module | Nội dung |
 |---|---|
-| `brain/data/things_eeg2.py` | Đọc file pickle gốc, chuyển sang float16 theo từng khúc, mở bằng memmap, cắt cửa sổ thời gian, trung bình n lần lặp |
+| `brain/data/things_eeg2.py` | Đọc file pickle gốc, chuyển sang float32 (hoặc float16) theo từng khúc, mở bằng memmap, cắt cửa sổ thời gian, trung bình n lần lặp |
 | `brain/data/splits.py` | Tách validation theo concept, lưu và đọc lại từ JSON |
 | `brain/data/categories.py` | Ghép concept với 27 category của THINGS, đếm số ảnh dùng được cho shuf-w |
 | `brain/controls.py` | shuf-w, shuf-x, null-0, null-g (thống kê lấy từ train), pca-k (học trên train), nn-train |
 | `common/metrics.py` | Two-way identification (Pearson hoặc cosine, có bản trong cùng category), top-k, PRR và PRR kèm khoảng tin cậy |
 | `common/stats.py` | Bootstrap theo ảnh, tỉ số của hai trung bình, Wilcoxon có cặp, Holm |
 | `brain/tier1.py` | Bảng điểm theo ảnh theo cột của PLAN.md và bảng PRR |
+| `brain/protocols.py` | Giao thức của NICE, ATM và chế độ audit; chuẩn bị EEG theo từng giao thức; validation kiểu NICE; k-way kiểu ATM |
 | `bench/profile.py` | Đo thời gian, RAM đỉnh, VRAM đỉnh, dung lượng thư mục |
 
 Tất cả có test chạy trên CPU (`pytest -q`).
 
-## 7. Điểm chị cần quyết định
+## 8. Điểm chị cần quyết định
 
 1. **Bản tiền xử lý:** 63 kênh, 250 Hz (mặc định) hay 17 kênh, 100 Hz.
-2. **Lưu trữ:** gói Drive 100 GB, hay giữ ít subject một lúc.
+2. **Lưu trữ:** gói Drive 100 GB (cần để giữ float32 cho 10 subject), hay giữ 2 subject một lúc.
 3. **Concept thuộc nhiều category:** trên toàn bộ 1.854 concept THINGS, bảng `category27_manual` cho 559 concept không thuộc category nào và 302 concept thuộc từ hai category trở lên. Nhiều trường hợp là category lồng nhau, ví dụ "apple" thuộc cả food và fruit. Mặc định đang loại các concept này khỏi shuf-w. Notebook 00 in bảng đếm cho 200 ảnh test với ba bảng category (manual, top-down, bottom-up) và hai cách xử lý, để chị chọn.
 4. **Validation:** 74 concept (740 ảnh) tách theo concept, seed 0.
 
-## 8. Việc chưa làm
+## 9. Việc chưa làm
 
 - Wrapper train NICE và ATM với checkpoint chọn theo validation. Việc này cần clone hai repo gốc ở một commit cố định và ghi vào `third_party/VERSIONS.md`.
 - Null và PCA ở mức tín hiệu: code control đã có, nhưng cần model đã train để chạy.
